@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<title>Test Closure Report — v1.0.0</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+       margin: 0; padding: 0; background: #f5f5f5; color: #333; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+h1 { color: #1a1a2e; border-bottom: 3px solid #0066cc; padding-bottom: 8px; }
+h2 { color: #0066cc; margin-top: 32px; }
+h3 { color: #444; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px;
+         font-size: 12px; font-weight: 600; }
+.badge-pass { background: #d4edda; color: #155724; }
+.badge-fail { background: #f8d7da; color: #721c24; }
+.badge-new  { background: #fff3cd; color: #856404; }
+.badge-closed { background: #e2e3e5; color: #383d41; }
+.badge-critical { background: #f8d7da; color: #721c24; }
+.badge-major    { background: #fff3cd; color: #856404; }
+.badge-minor    { background: #d1ecf1; color: #0c5460; }
+.badge-P0 { background: #f8d7da; color: #721c24; }
+.badge-P1 { background: #fde8d8; color: #8a4910; }
+.badge-P2 { background: #fff3cd; color: #856404; }
+.badge-P3 { background: #e2e3e5; color: #383d41; }
+table { width: 100%; border-collapse: collapse; background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,.1); border-radius: 8px; overflow: hidden; }
+th { background: #0066cc; color: white; padding: 10px 14px; text-align: left; font-size: 13px; }
+td { padding: 9px 14px; border-bottom: 1px solid #eee; font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8f9fa; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 16px; margin: 24px 0; }
+.summary-card { background: white; border-radius: 8px; padding: 20px;
+                box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center; }
+.summary-card .number { font-size: 36px; font-weight: 700; color: #0066cc; }
+.summary-card .label  { font-size: 13px; color: #666; margin-top: 4px; }
+.pass-num { color: #28a745 !important; }
+.fail-num { color: #dc3545 !important; }
+.risk-high   { color: #dc3545; font-weight: 600; }
+.risk-medium { color: #fd7e14; font-weight: 600; }
+.risk-low    { color: #28a745; }
+.meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+.section { background: white; border-radius: 8px; padding: 20px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 24px; }
+.criteria-pass { color: #28a745; } .criteria-fail { color: #dc3545; }
+.tag { display: inline-block; background: #e8f0fe; color: #1a73e8;
+       border-radius: 4px; padding: 1px 6px; font-size: 11px; margin: 1px; }
+footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding: 16px; }
+</style></head>
+<body><div class="container">
+<h1>📊 Test Closure Report</h1>
+<p class="meta">Release: <strong>v1.0.0</strong> &nbsp;|&nbsp; Generated: 2026-05-26 23:22</p>
+
+<div class="section">
+<h2>Executive Summary</h2>
+<p>testboat v1.0.0 首个版本测试完成。29 个 TC 全部通过（100% pass rate），覆盖 init/enable/strategy/tag/case/validate/report/version 八大模块。所有 bug 已关闭。推荐发布。</p>
+</div>
+
+<div class="summary-grid">
+  <div class="summary-card"><div class="number">29</div><div class="label">Total TCs</div></div>
+  <div class="summary-card"><div class="number pass-num">29</div><div class="label">Passed</div></div>
+  <div class="summary-card"><div class="number fail-num">0</div><div class="label">Failed</div></div>
+  <div class="summary-card"><div class="number">100%</div><div class="label">Pass Rate</div></div>
+  <div class="summary-card"><div class="number fail-num">0</div><div class="label">Open Bugs</div></div>
+  <div class="summary-card"><div class="number">4</div><div class="label">Closed Bugs</div></div>
+</div>
+
+<div class="section">
+<h2>Metrics vs Exit Criteria</h2>
+<table><tr><th>Level</th><th>Open Bugs</th><th>Acceptable</th><th>Status</th></tr>
+
+<tr>
+  <td><span class="badge badge-P0">P0</span></td>
+  <td>0</td><td>0</td>
+  <td class="criteria-pass">
+    ✓ Pass</td>
+</tr>
+<tr>
+  <td><span class="badge badge-P1">P1</span></td>
+  <td>0</td><td>0</td>
+  <td class="criteria-pass">
+    ✓ Pass</td>
+</tr>
+<tr>
+  <td><span class="badge badge-P2">P2</span></td>
+  <td>0</td><td>3</td>
+  <td class="criteria-pass">
+    ✓ Pass</td>
+</tr>
+<tr>
+  <td><span class="badge badge-P3">P3</span></td>
+  <td>0</td><td>10</td>
+  <td class="criteria-pass">
+    ✓ Pass</td>
+</tr>
+</table>
+<p style="margin-top:12px">TC Pass Rate:
+  <strong class="criteria-pass">
+  100%</strong>
+</p>
+</div>
+
+<div class="section">
+<h2>Exit Criteria Checklist</h2>
+<ul>
+  <li class="criteria-pass">所有 STORY-005 ~ STORY-010 status = done</li>
+
+  <li class="criteria-pass">testboat strategy validate 通过</li>
+
+  <li class="criteria-pass">testboat report sprint 能生成完整 HTML，内容覆盖 case/exec/bug 数据</li>
+
+  <li class="criteria-pass">无已知 P0/P1 bug</li>
+</ul>
+<p><strong>Overall Sign-off: </strong>
+  <span class="criteria-pass" style="font-size:18px">
+  ✓ READY FOR RELEASE
+  </span></p>
+</div>
+
+<div class="section">
+<h2>Bug Summary</h2>
+<table><tr><th>ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th></tr>
+
+<tr>
+  <td>BUG-001</td><td>SKILL.md CLI Commands 区块缺少 testboat bug 相关命令</td>
+  <td><span class="badge badge-minor">minor</span></td>
+  <td><span class="badge badge-P1">P1</span></td>
+  <td><span class="badge badge-closed">closed</span></td>
+</tr>
+<tr>
+  <td>BUG-002</td><td>testboat bug 缺少 tag 关联，无法按 sprint/module 查询</td>
+  <td><span class="badge badge-major">major</span></td>
+  <td><span class="badge badge-P1">P1</span></td>
+  <td><span class="badge badge-closed">closed</span></td>
+</tr>
+<tr>
+  <td>BUG-003</td><td>Agent skill 缺少回归测试闭环：代码变更/新需求/bug修复后未触发回归</td>
+  <td><span class="badge badge-major">major</span></td>
+  <td><span class="badge badge-P1">P1</span></td>
+  <td><span class="badge badge-closed">closed</span></td>
+</tr>
+<tr>
+  <td>BUG-004</td><td>report sprint 模板使用 Jinja2 不支持的 'is defined' 语法导致渲染崩溃</td>
+  <td><span class="badge badge-major">major</span></td>
+  <td><span class="badge badge-P0">P0</span></td>
+  <td><span class="badge badge-closed">closed</span></td>
+</tr>
+</table>
+</div>
+
+<footer>Generated by testboat · 2026-05-26 23:22</footer>
+</div></body></html>
