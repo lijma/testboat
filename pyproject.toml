@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "testboat"
-version = "0.1.0"
+version = "1.0.0"
 description = "Manage tests like code — CLI + AI agent skill for the complete testing lifecycle"
 readme = "README.md"
 license = { text = "Apache-2.0" }
