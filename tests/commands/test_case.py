@@ -1,4 +1,4 @@
-"""Unit tests for ftest case command — 100% coverage."""
+"""Unit tests for testboat case command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.case import (
+from testboat.cli import app
+from testboat.commands.case import (
     CaseModel,
     CaseStatus,
     _case_path,
@@ -20,7 +20,7 @@ from ftest.commands.case import (
     validate_case,
     validate_cases_batch,
 )
-from ftest.commands.tag import add_tag
+from testboat.commands.tag import add_tag
 
 runner = CliRunner()
 

@@ -1,4 +1,4 @@
-"""Unit tests for ftest bug command — 100% coverage."""
+"""Unit tests for testboat bug command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.bug import (
+from testboat.cli import app
+from testboat.commands.bug import (
     BugPriority,
     BugStatus,
     Severity,
@@ -132,13 +132,13 @@ class TestAddBug:
         assert path == _bug_path(tmp_path, "BUG-001")
 
     def test_empty_title_raises_via_pydantic(self, tmp_path: Path) -> None:
-        from ftest.commands.bug import BugModel
+        from testboat.commands.bug import BugModel
         with pytest.raises(Exception):
             BugModel(id="BUG-001", title="   ", status="new",
                      severity="major", priority="P2")
 
     def test_valid_title_passes_validator(self) -> None:
-        from ftest.commands.bug import BugModel
+        from testboat.commands.bug import BugModel
         m = BugModel(id="BUG-001", title="Login crash", status="new",
                      severity="major", priority="P2")
         assert m.title == "Login crash"
@@ -321,7 +321,7 @@ class TestBugCli:
                                      "--workspace", str(tmp_path)])
         assert result.exit_code == 0
         data = yaml.safe_load(
-            (tmp_path / ".ftest" / "draft" / "bugs" / "BUG-001.yaml").read_text()
+            (tmp_path / ".testboat" / "draft" / "bugs" / "BUG-001.yaml").read_text()
         )
         assert data["tags"]["sprint"] == "v1.0.0"
         assert data["tags"]["module"] == "auth"

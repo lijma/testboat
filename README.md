@@ -1,11 +1,11 @@
-# ftest
+# testboat
 
 **Manage tests like code — CLI + AI agent skill for the complete testing lifecycle.**
 
-[![PyPI version](https://img.shields.io/pypi/v/ftest?style=for-the-badge)](https://pypi.org/project/ftest/)
-[![Python](https://img.shields.io/pypi/pyversions/ftest?style=for-the-badge)](https://pypi.org/project/ftest/)
+[![PyPI version](https://img.shields.io/pypi/v/testboat?style=for-the-badge)](https://pypi.org/project/testboat/)
+[![Python](https://img.shields.io/pypi/pyversions/testboat?style=for-the-badge)](https://pypi.org/project/testboat/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/lijma/ftest/release.yml?style=for-the-badge&label=tests)](https://github.com/lijma/ftest/actions)
+[![Tests](https://img.shields.io/github/actions/workflow/status/lijma/testboat/release.yml?style=for-the-badge&label=tests)](https://github.com/lijma/testboat/actions)
 
 ---
 
@@ -14,7 +14,7 @@
 Testing is still managed with scattered spreadsheets, Confluence pages, and tribal knowledge. Test cases drift from requirements, execution results are never recorded, and every sprint the team starts from scratch.
 
 ```
-WITHOUT ftest
+WITHOUT testboat
 
   Strategy lives in a Word doc nobody reads.
   Test cases are in an Excel sheet from 2 years ago.
@@ -23,11 +23,11 @@ WITHOUT ftest
 ```
 
 ```
-WITH ftest
+WITH testboat
 
   Strategy, test cases, execution results, bugs — all structured YAML.
   AI generates test cases from requirements, executes automation, files bugs.
-  ftest validate checks coverage and exit criteria before any report.
+  testboat validate checks coverage and exit criteria before any report.
   One source of truth. Git-diffable. Always up to date.
 ```
 
@@ -35,10 +35,10 @@ WITH ftest
 
 ## How It Works
 
-ftest manages a structured filesystem under `.ftest/` in your workspace:
+testboat manages a structured filesystem under `.testboat/` in your workspace:
 
 ```
-.ftest/
+.testboat/
   .active          ← current working version (draft / v1.0 / ...)
   draft/
     strategy.yaml  ← test strategy (scope, risk matrix, exit criteria)
@@ -59,40 +59,40 @@ ftest manages a structured filesystem under `.ftest/` in your workspace:
 ## Quick Start
 
 ```bash
-pip install ftest
+pip install testboat
 
 # Initialize workspace
-ftest init
+testboat init
 
 # Activate agent skill (Claude, Copilot, Cursor, Trae, Kiro, etc.)
-ftest enable claude
+testboat enable claude
 
 # Create test strategy
-ftest strategy create
-# → edit .ftest/draft/strategy.yaml, then:
-ftest strategy validate
+testboat strategy create
+# → edit .testboat/draft/strategy.yaml, then:
+testboat strategy validate
 
 # Add tags and test cases
-ftest tag add sprint v1.0
-ftest tag add module auth
-ftest case add --title "Login with wrong password returns 401" \
+testboat tag add sprint v1.0
+testboat tag add module auth
+testboat case add --title "Login with wrong password returns 401" \
                --sprint v1.0 --type functional --module auth --req-id STORY-001
 
 # Create execution plan and run
-ftest plan create TC-001 --type automated --tool pytest
-ftest plan register TC-001 .ftest/draft/executions/automate/pytest/tests/test_TC001.py
-ftest plan status TC-001 approved
+testboat plan create TC-001 --type automated --tool pytest
+testboat plan register TC-001 .testboat/draft/executions/automate/pytest/tests/test_TC001.py
+testboat plan status TC-001 approved
 
 # Record result and file bugs
-ftest result record TC-001 pass --type automated
-ftest bug add --title "Login 500 error" --tc TC-001 --severity critical --priority P0
+testboat result record TC-001 pass --type automated
+testboat bug add --title "Login 500 error" --tc TC-001 --severity critical --priority P0
 
 # Pre-report validation
-ftest validate
+testboat validate
 
 # Generate and preview reports
-ftest report strategy && ftest report sprint && ftest report closure
-ftest preview
+testboat report strategy && testboat report sprint && testboat report closure
+testboat preview
 ```
 
 ---
@@ -101,30 +101,30 @@ ftest preview
 
 | Command | Description |
 |---------|-------------|
-| `ftest init` | Initialize `.ftest/` workspace |
-| `ftest enable <agent>` | Create agent rules + skill files |
-| `ftest version create/switch/list` | Manage named versions |
-| `ftest strategy create/validate` | Test strategy lifecycle |
-| `ftest tag add/list` | Manage sprint / type / module tags |
-| `ftest case add/list/show/status/validate` | Test case CRUD + state machine |
-| `ftest plan create/register/status` | Execution plan management |
-| `ftest result record/list` | Record execution results |
-| `ftest matrix show` | Global execution tracking |
-| `ftest bug add/list/status` | Bug lifecycle |
-| `ftest validate` | Pre-report health check |
-| `ftest report strategy/sprint/closure` | Generate HTML reports |
-| `ftest preview` | Local report preview server |
+| `testboat init` | Initialize `.testboat/` workspace |
+| `testboat enable <agent>` | Create agent rules + skill files |
+| `testboat version create/switch/list` | Manage named versions |
+| `testboat strategy create/validate` | Test strategy lifecycle |
+| `testboat tag add/list` | Manage sprint / type / module tags |
+| `testboat case add/list/show/status/validate` | Test case CRUD + state machine |
+| `testboat plan create/register/status` | Execution plan management |
+| `testboat result record/list` | Record execution results |
+| `testboat matrix show` | Global execution tracking |
+| `testboat bug add/list/status` | Bug lifecycle |
+| `testboat validate` | Pre-report health check |
+| `testboat report strategy/sprint/closure` | Generate HTML reports |
+| `testboat preview` | Local report preview server |
 
 ## Supported Agents
 
 | Agent | Files created |
 |-------|--------------|
-| Claude / OpenCode | `.claude/rules/ftest.md` + `.claude/skills/ftest/SKILL.md` |
-| GitHub Copilot | `.github/instructions/ftest.instructions.md` |
-| Cursor | `.cursor/rules/ftest.md` + `.cursor/skills/ftest/SKILL.md` |
-| Trae | `.trae/rules/ftest.md` + `.trae/skills/ftest/SKILL.md` |
-| Kiro | `.kiro/steering/ftest.md` |
-| OpenClaw | `skills/ftest/SKILL.md` |
+| Claude / OpenCode | `.claude/rules/testboat.md` + `.claude/skills/testboat/SKILL.md` |
+| GitHub Copilot | `.github/instructions/testboat.instructions.md` |
+| Cursor | `.cursor/rules/testboat.md` + `.cursor/skills/testboat/SKILL.md` |
+| Trae | `.trae/rules/testboat.md` + `.trae/skills/testboat/SKILL.md` |
+| Kiro | `.kiro/steering/testboat.md` |
+| OpenClaw | `skills/testboat/SKILL.md` |
 
 ---
 

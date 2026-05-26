@@ -1,4 +1,4 @@
-"""Unit tests for ftest result / matrix / exec commands — 100% coverage."""
+"""Unit tests for testboat result / matrix / exec commands — 100% coverage."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -7,10 +7,10 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.exec_ import run_case, run_sprint
-from ftest.commands.plan import create_plan, set_plan_status
-from ftest.commands.result import (
+from testboat.cli import app
+from testboat.commands.exec_ import run_case, run_sprint
+from testboat.commands.plan import create_plan, set_plan_status
+from testboat.commands.result import (
     ResultStatus,
     _matrix_path,
     _result_path,
@@ -226,7 +226,7 @@ class TestRunSprint:
 
     def test_blocked_when_run_case_raises(self, tmp_path: Path) -> None:
         # Create an approved automated plan but with automation_path=null → run_case raises ValueError
-        from ftest.commands.plan import _plan_path
+        from testboat.commands.plan import _plan_path
         _plan_path(tmp_path, "TC-001").parent.mkdir(parents=True, exist_ok=True)
         _plan_path(tmp_path, "TC-001").write_text(
             "tc_id: TC-001\nstatus: approved\nexecution_type: automated\n"
@@ -243,7 +243,7 @@ class TestRunSprint:
 
     def test_skips_plan_without_tool(self, tmp_path: Path) -> None:
         # Approved automated plan with null automation_tool → skipped silently
-        from ftest.commands.plan import _plan_path
+        from testboat.commands.plan import _plan_path
         _plan_path(tmp_path, "TC-001").parent.mkdir(parents=True, exist_ok=True)
         _plan_path(tmp_path, "TC-001").write_text(
             "tc_id: TC-001\nstatus: approved\nexecution_type: automated\n"
@@ -324,7 +324,7 @@ class TestMatrixCli:
 
 
 class TestExecRunCase:
-    """Tests for exec_.run_case — not via CLI (ftest exec removed)."""
+    """Tests for exec_.run_case — not via CLI (testboat exec removed)."""
 
     def test_exec_single_pass(self, tmp_path: Path) -> None:
         create_plan(tmp_path, "TC-001", execution_type="automated")
@@ -354,6 +354,6 @@ class TestExecRunCase:
 
     def test_run_case_resolves_subprocess_when_runner_none(self, tmp_path: Path) -> None:
         create_plan(tmp_path, "TC-001", execution_type="automated")
-        with patch("ftest.commands.exec_.subprocess.run", return_value=_make_proc(0, stdout="ok")):
+        with patch("testboat.commands.exec_.subprocess.run", return_value=_make_proc(0, stdout="ok")):
             status, _ = run_case(tmp_path, "TC-001")  # _runner=None → uses subprocess.run
         assert status == "pass"

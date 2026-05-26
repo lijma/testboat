@@ -1,4 +1,4 @@
-"""Unit tests for ftest validate command — 100% coverage."""
+"""Unit tests for testboat validate command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,14 +6,14 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.bug import add_bug, set_bug_status
-from ftest.commands.case import add_case, set_status
-from ftest.commands.plan import create_plan, register_automation, set_plan_status
-from ftest.commands.result import record_result
-from ftest.commands.strategy import create_strategy
-from ftest.commands.tag import add_tag
-from ftest.commands.validate import (
+from testboat.cli import app
+from testboat.commands.bug import add_bug, set_bug_status
+from testboat.commands.case import add_case, set_status
+from testboat.commands.plan import create_plan, register_automation, set_plan_status
+from testboat.commands.result import record_result
+from testboat.commands.strategy import create_strategy
+from testboat.commands.tag import add_tag
+from testboat.commands.validate import (
     ValidateReport,
     _check_execution_completeness,
     _check_exit_criteria,
@@ -39,7 +39,7 @@ def _setup_full_workspace(root: Path) -> None:
     add_case(root, "Login test", sprint="v1.0.0", type_="functional",
              module="auth", req_id="STORY-001")
     # add steps so validate passes when status != draft
-    tc_path = root / ".ftest" / "draft" / "cases" / "TC-001.yaml"
+    tc_path = root / ".testboat" / "draft" / "cases" / "TC-001.yaml"
     data = yaml.safe_load(tc_path.read_text())
     data["steps"] = [{"action": "do thing", "expected": "result"}]
     data["expected_result"] = "all good"
@@ -50,7 +50,7 @@ def _setup_full_workspace(root: Path) -> None:
 
 
 def _write_strategy(root: Path, data: dict) -> None:
-    path = root / ".ftest" / "draft" / "strategy.yaml"
+    path = root / ".testboat" / "draft" / "strategy.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
 
@@ -75,8 +75,8 @@ class TestCheckFormat:
         assert any("strategy.yaml" in d for d in result.details)
 
     def test_fails_when_strategy_invalid(self, tmp_path: Path) -> None:
-        from ftest.commands.strategy import STRATEGY_FILE
-        path = tmp_path / ".ftest" / "draft" / STRATEGY_FILE
+        from testboat.commands.strategy import STRATEGY_FILE
+        path = tmp_path / ".testboat" / "draft" / STRATEGY_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("status: garbage\nrelease: v1\n")
         add_case(tmp_path, "Test")
@@ -93,7 +93,7 @@ class TestCheckFormat:
         add_tag(tmp_path, "sprint", "v1.0.0")
         create_strategy(tmp_path)
         add_case(tmp_path, "Test", sprint="v1.0.0")
-        tc_path = tmp_path / ".ftest" / "draft" / "cases" / "TC-001.yaml"
+        tc_path = tmp_path / ".testboat" / "draft" / "cases" / "TC-001.yaml"
         data = yaml.safe_load(tc_path.read_text())
         data["tags"]["sprint"] = "nonexistent"
         tc_path.write_text(yaml.dump(data))
@@ -214,7 +214,7 @@ class TestCheckExitCriteria:
 
     def test_no_severity_rules_shows_warning(self, tmp_path: Path) -> None:
         create_strategy(tmp_path)
-        path = tmp_path / ".ftest" / "draft" / "strategy.yaml"
+        path = tmp_path / ".testboat" / "draft" / "strategy.yaml"
         data = yaml.safe_load(path.read_text())
         data["metrics"]["severity"] = []
         path.write_text(yaml.dump(data))

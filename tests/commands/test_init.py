@@ -1,4 +1,4 @@
-"""Unit tests for ftest init command — 100% coverage."""
+"""Unit tests for testboat init command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,11 +6,11 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.init import (
+from testboat.cli import app
+from testboat.commands.init import (
     DRAFT_DIR,
     DRAFT_SUBDIRS,
-    FTEST_DIR,
+    testboat_DIR,
     _default_config,
     init_workspace,
 )
@@ -24,51 +24,51 @@ runner = CliRunner()
 
 
 class TestInitWorkspace:
-    def test_creates_ftest_dir(self, tmp_path: Path) -> None:
+    def test_creates_testboat_dir(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        assert (tmp_path / FTEST_DIR).is_dir()
+        assert (tmp_path / testboat_DIR).is_dir()
 
     def test_creates_draft_dir(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        assert (tmp_path / FTEST_DIR / DRAFT_DIR).is_dir()
+        assert (tmp_path / testboat_DIR / DRAFT_DIR).is_dir()
 
     def test_creates_all_subdirs(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        draft = tmp_path / FTEST_DIR / DRAFT_DIR
+        draft = tmp_path / testboat_DIR / DRAFT_DIR
         for subdir in DRAFT_SUBDIRS:
             assert (draft / subdir).is_dir(), f"missing: {subdir}"
 
     def test_creates_config_yaml(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        assert (tmp_path / FTEST_DIR / DRAFT_DIR / "ftest.yaml").is_file()
+        assert (tmp_path / testboat_DIR / DRAFT_DIR / "testboat.yaml").is_file()
 
     def test_config_yaml_content(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
         data = yaml.safe_load(
-            (tmp_path / FTEST_DIR / DRAFT_DIR / "ftest.yaml").read_text(encoding="utf-8")
+            (tmp_path / testboat_DIR / DRAFT_DIR / "testboat.yaml").read_text(encoding="utf-8")
         )
         assert data["version"] == "draft"
         assert data["workspace"] == str(tmp_path)
-        assert data["created_by"] == "ftest init"
+        assert data["created_by"] == "testboat init"
 
-    def test_returns_ftest_path(self, tmp_path: Path) -> None:
-        assert init_workspace(tmp_path) == tmp_path / FTEST_DIR
+    def test_returns_testboat_path(self, tmp_path: Path) -> None:
+        assert init_workspace(tmp_path) == tmp_path / testboat_DIR
 
     def test_idempotent_second_run_succeeds(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
         init_workspace(tmp_path)  # must not raise
-        assert (tmp_path / FTEST_DIR / DRAFT_DIR).is_dir()
+        assert (tmp_path / testboat_DIR / DRAFT_DIR).is_dir()
 
     def test_idempotent_preserves_extra_files(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        extra = tmp_path / FTEST_DIR / DRAFT_DIR / "cases" / "TC-001.yaml"
+        extra = tmp_path / testboat_DIR / DRAFT_DIR / "cases" / "TC-001.yaml"
         extra.write_text("id: TC-001", encoding="utf-8")
         init_workspace(tmp_path)
         assert extra.exists()
 
     def test_idempotent_refreshes_config(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        config = tmp_path / FTEST_DIR / DRAFT_DIR / "ftest.yaml"
+        config = tmp_path / testboat_DIR / DRAFT_DIR / "testboat.yaml"
         config.write_text("corrupted", encoding="utf-8")
         init_workspace(tmp_path)
         data = yaml.safe_load(config.read_text(encoding="utf-8"))
@@ -85,7 +85,7 @@ class TestDefaultConfig:
         cfg = _default_config(tmp_path)
         assert cfg["version"] == "draft"
         assert cfg["workspace"] == str(tmp_path)
-        assert cfg["created_by"] == "ftest init"
+        assert cfg["created_by"] == "testboat init"
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ class TestInitCli:
     def test_cli_with_explicit_workspace(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])
         assert result.exit_code == 0
-        assert "Initialized ftest workspace" in result.output
+        assert "Initialized testboat workspace" in result.output
 
     def test_cli_output_lists_subdirs(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])
@@ -106,7 +106,7 @@ class TestInitCli:
 
     def test_cli_output_mentions_config(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])
-        assert "ftest.yaml" in result.output
+        assert "testboat.yaml" in result.output
 
     def test_cli_idempotent_second_run(self, tmp_path: Path) -> None:
         runner.invoke(app, ["init", str(tmp_path)])
@@ -115,7 +115,7 @@ class TestInitCli:
 
     def test_creates_active_file_with_draft(self, tmp_path: Path) -> None:
         init_workspace(tmp_path)
-        active_path = tmp_path / ".ftest" / ".active"
+        active_path = tmp_path / ".testboat" / ".active"
         assert active_path.exists()
         assert active_path.read_text().strip() == "draft"
 

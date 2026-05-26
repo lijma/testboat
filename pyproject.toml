@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ftest"
+name = "testboat"
 version = "0.1.0"
 description = "Manage tests like code — CLI + AI agent skill for the complete testing lifecycle"
 readme = "README.md"
@@ -30,13 +30,13 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lijma/ftest"
-Documentation = "https://lijma.github.io/ftest/"
-Repository = "https://github.com/lijma/ftest"
-Issues = "https://github.com/lijma/ftest/issues"
+Homepage = "https://github.com/lijma/testboat"
+Documentation = "https://lijma.github.io/testboat/"
+Repository = "https://github.com/lijma/testboat"
+Issues = "https://github.com/lijma/testboat/issues"
 
 [project.scripts]
-ftest = "ftest.cli:app"
+testboat = "testboat.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -45,14 +45,14 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ftest"]
+packages = ["src/testboat"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=ftest --cov-report=term-missing --cov-fail-under=100"
+addopts = "--cov=testboat --cov-report=term-missing --cov-fail-under=100"
 
 [tool.coverage.run]
-source = ["src/ftest"]
+source = ["src/testboat"]
 
 [tool.coverage.report]
 exclude_lines = [

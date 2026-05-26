@@ -1,4 +1,4 @@
-"""Unit tests for ftest report + preview — 100% coverage."""
+"""Unit tests for testboat report + preview — 100% coverage."""
 
 import threading
 import time
@@ -9,10 +9,10 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.bug import add_bug
-from ftest.commands.case import add_case, set_status
-from ftest.commands.preview import (
+from testboat.cli import app
+from testboat.commands.bug import add_bug
+from testboat.commands.case import add_case, set_status
+from testboat.commands.preview import (
     PID_FILE,
     _find_free_port,
     _kill_existing,
@@ -21,7 +21,7 @@ from ftest.commands.preview import (
     export_pdf,
     serve_reports,
 )
-from ftest.commands.report import (
+from testboat.commands.report import (
     _load_bugs,
     _load_cases,
     _load_matrix,
@@ -33,9 +33,9 @@ from ftest.commands.report import (
     generate_sprint,
     generate_strategy,
 )
-from ftest.commands.result import record_result
-from ftest.commands.strategy import create_strategy
-from ftest.commands.tag import add_tag
+from testboat.commands.result import record_result
+from testboat.commands.strategy import create_strategy
+from testboat.commands.tag import add_tag
 
 runner = CliRunner()
 
@@ -112,7 +112,7 @@ class TestGenerateIndex:
         _setup(tmp_path)
         path = generate_index(tmp_path)
         assert path.name == "index.html"
-        assert path.parent == tmp_path / ".ftest"
+        assert path.parent == tmp_path / ".testboat"
         assert path.exists()
 
     def test_index_shows_draft_version(self, tmp_path: Path) -> None:
@@ -122,7 +122,7 @@ class TestGenerateIndex:
 
     def test_index_shows_named_versions(self, tmp_path: Path) -> None:
         _setup(tmp_path)
-        from ftest.commands.version import create_version
+        from testboat.commands.version import create_version
         create_version(tmp_path, "v1.0")
         path = generate_index(tmp_path)
         assert "v1.0" in path.read_text(encoding="utf-8")
@@ -130,7 +130,7 @@ class TestGenerateIndex:
     def test_per_version_index_created(self, tmp_path: Path) -> None:
         _setup(tmp_path)
         generate_index(tmp_path)
-        draft_idx = tmp_path / ".ftest" / "draft" / "reports" / "index.html"
+        draft_idx = tmp_path / ".testboat" / "draft" / "reports" / "index.html"
         assert draft_idx.exists()
 
     def test_per_version_index_has_ready_banner(self, tmp_path: Path) -> None:
@@ -138,14 +138,14 @@ class TestGenerateIndex:
         generate_strategy(tmp_path)
         generate_sprint(tmp_path)
         generate_index(tmp_path)
-        content = (tmp_path / ".ftest" / "draft" / "reports" / "index.html").read_text()
+        content = (tmp_path / ".testboat" / "draft" / "reports" / "index.html").read_text()
         assert "READY FOR RELEASE" in content
 
     def test_per_version_index_not_ready_with_bugs(self, tmp_path: Path) -> None:
         _setup(tmp_path)
         add_bug(tmp_path, "Critical bug", priority="P0")
         generate_index(tmp_path)
-        content = (tmp_path / ".ftest" / "draft" / "reports" / "index.html").read_text()
+        content = (tmp_path / ".testboat" / "draft" / "reports" / "index.html").read_text()
         assert "NOT READY" in content
 
     def test_per_version_index_shows_reports(self, tmp_path: Path) -> None:
@@ -153,7 +153,7 @@ class TestGenerateIndex:
         generate_strategy(tmp_path)
         generate_sprint(tmp_path)
         generate_index(tmp_path)
-        content = (tmp_path / ".ftest" / "draft" / "reports" / "index.html").read_text()
+        content = (tmp_path / ".testboat" / "draft" / "reports" / "index.html").read_text()
         assert "strategy" in content
         assert "sprint" in content
 
@@ -162,7 +162,7 @@ class TestGenerateIndex:
         generate_strategy(tmp_path)
         generate_index(tmp_path)
         generate_index(tmp_path)  # second call: index.html already exists in reports/
-        content = (tmp_path / ".ftest" / "draft" / "reports" / "index.html").read_text()
+        content = (tmp_path / ".testboat" / "draft" / "reports" / "index.html").read_text()
         assert content.count("index.html") == 0
 
     def test_index_no_draft_dir(self, tmp_path: Path) -> None:
@@ -172,7 +172,7 @@ class TestGenerateIndex:
     def test_index_kpi_in_per_version_page(self, tmp_path: Path) -> None:
         _setup(tmp_path)
         generate_index(tmp_path)
-        content = (tmp_path / ".ftest" / "draft" / "reports" / "index.html").read_text()
+        content = (tmp_path / ".testboat" / "draft" / "reports" / "index.html").read_text()
         assert "100%" in content
 
 
@@ -275,7 +275,7 @@ class TestGenerateClosure:
 
     def test_no_severity_rules(self, tmp_path: Path) -> None:
         create_strategy(tmp_path)
-        path = tmp_path / ".ftest" / "draft" / "strategy.yaml"
+        path = tmp_path / ".testboat" / "draft" / "strategy.yaml"
         data = yaml.safe_load(path.read_text())
         data["metrics"]["severity"] = []
         path.write_text(yaml.dump(data))
@@ -289,11 +289,11 @@ class TestGenerateClosure:
 
 
 class TestPidManagement:
-    def test_pid_path_in_ftest_dir(self, tmp_path: Path) -> None:
-        assert _pid_path(tmp_path) == tmp_path / ".ftest" / PID_FILE
+    def test_pid_path_in_testboat_dir(self, tmp_path: Path) -> None:
+        assert _pid_path(tmp_path) == tmp_path / ".testboat" / PID_FILE
 
     def test_write_pid_creates_file(self, tmp_path: Path) -> None:
-        (tmp_path / ".ftest").mkdir()
+        (tmp_path / ".testboat").mkdir()
         _write_pid(tmp_path, 12345)
         assert _pid_path(tmp_path).read_text() == "12345"
 
@@ -301,7 +301,7 @@ class TestPidManagement:
         assert _kill_existing(tmp_path) is False
 
     def test_kill_existing_removes_stale_pid(self, tmp_path: Path) -> None:
-        (tmp_path / ".ftest").mkdir()
+        (tmp_path / ".testboat").mkdir()
         _pid_path(tmp_path).write_text("999999999")  # non-existent PID
         assert _kill_existing(tmp_path) is False  # no process, but removed
         assert not _pid_path(tmp_path).exists()
@@ -309,7 +309,7 @@ class TestPidManagement:
     def test_kill_existing_real_process(self, tmp_path: Path) -> None:
         import subprocess as sp
         proc = sp.Popen(["sleep", "60"])
-        (tmp_path / ".ftest").mkdir()
+        (tmp_path / ".testboat").mkdir()
         _pid_path(tmp_path).write_text(str(proc.pid))
         result = _kill_existing(tmp_path)
         proc.wait()
@@ -317,7 +317,7 @@ class TestPidManagement:
         assert not _pid_path(tmp_path).exists()
 
     def test_kill_existing_invalid_pid_file(self, tmp_path: Path) -> None:
-        (tmp_path / ".ftest").mkdir()
+        (tmp_path / ".testboat").mkdir()
         _pid_path(tmp_path).write_text("not-a-pid")
         assert _kill_existing(tmp_path) is False
 
@@ -328,7 +328,7 @@ class TestPidManagement:
         stop.set()
 
     def test_serve_kills_existing_before_start(self, tmp_path: Path) -> None:
-        (tmp_path / ".ftest").mkdir()
+        (tmp_path / ".testboat").mkdir()
         _pid_path(tmp_path).write_text("999999999")  # stale PID
         stop = threading.Event()
         serve_reports(tmp_path, open_browser=False, _stop_event=stop)  # should not raise
@@ -348,10 +348,10 @@ class TestPreview:
         assert url.startswith("http://127.0.0.1:")
         stop.set()
 
-    def test_serve_reports_creates_ftest_dir(self, tmp_path: Path) -> None:
+    def test_serve_reports_creates_testboat_dir(self, tmp_path: Path) -> None:
         stop = threading.Event()
         serve_reports(tmp_path, open_browser=False, _stop_event=stop)
-        assert (tmp_path / ".ftest").exists()
+        assert (tmp_path / ".testboat").exists()
         stop.set()
 
     def test_serve_reports_custom_port(self, tmp_path: Path) -> None:
@@ -376,8 +376,8 @@ class TestPreview:
 
     def test_serve_reports_open_browser(self, tmp_path: Path) -> None:
         stop = threading.Event()
-        with patch("ftest.commands.preview.webbrowser.open"):
-            with patch("ftest.commands.preview.threading.Timer") as mock_timer:
+        with patch("testboat.commands.preview.webbrowser.open"):
+            with patch("testboat.commands.preview.threading.Timer") as mock_timer:
                 mock_timer.return_value = MagicMock()
                 port, url = serve_reports(tmp_path, open_browser=True, _stop_event=stop)
                 mock_timer.assert_called_once()
@@ -388,7 +388,7 @@ class TestPreview:
             _stop_event.set()
             return (9999, "http://127.0.0.1:9999")
 
-        with patch("ftest.cli.serve_reports", side_effect=fake_serve):
+        with patch("testboat.cli.serve_reports", side_effect=fake_serve):
             result = runner.invoke(app, ["preview", "--no-browser",
                                          "--workspace", str(tmp_path)])
         assert "9999" in result.output
@@ -400,8 +400,8 @@ class TestPreview:
         fake_stop = MagicMock()
         fake_stop.wait.side_effect = KeyboardInterrupt()
 
-        with patch("ftest.cli.serve_reports", side_effect=fake_serve):
-            with patch("ftest.cli.threading.Event", return_value=fake_stop):
+        with patch("testboat.cli.serve_reports", side_effect=fake_serve):
+            with patch("testboat.cli.threading.Event", return_value=fake_stop):
                 result = runner.invoke(app, ["preview", "--no-browser",
                                              "--workspace", str(tmp_path)])
         assert "Stopped" in result.output
@@ -516,7 +516,7 @@ class TestPreviewCli:
     def test_preview_pdf_runtime_error_exits_one(self, tmp_path: Path) -> None:
         html = tmp_path / "test.html"
         html.write_text("<html/>")
-        with patch("ftest.commands.preview.export_pdf",
+        with patch("testboat.commands.preview.export_pdf",
                    side_effect=RuntimeError("no tool")):
             result = runner.invoke(app, ["preview", "--pdf", str(html),
                                          "--workspace", str(tmp_path)])
@@ -526,7 +526,7 @@ class TestPreviewCli:
         html = tmp_path / "test.html"
         html.write_text("<html/>")
         pdf = tmp_path / "test.pdf"
-        with patch("ftest.cli.export_pdf", return_value=pdf):
+        with patch("testboat.cli.export_pdf", return_value=pdf):
             result = runner.invoke(app, ["preview", "--pdf", str(html),
                                          "--workspace", str(tmp_path)])
         assert result.exit_code == 0
@@ -539,7 +539,7 @@ class TestPreviewCli:
             _stop_event.set()
             return (8888, "http://127.0.0.1:8888")
 
-        with patch("ftest.cli.serve_reports", side_effect=fake_serve):
+        with patch("testboat.cli.serve_reports", side_effect=fake_serve):
             result = runner.invoke(app, ["preview", "--no-browser",
                                          "--workspace", str(tmp_path)])
         assert result.exit_code == 0

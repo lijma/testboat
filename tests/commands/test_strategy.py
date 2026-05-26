@@ -1,4 +1,4 @@
-"""Unit tests for ftest strategy commands — 100% coverage."""
+"""Unit tests for testboat strategy commands — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.strategy import (
+from testboat.cli import app
+from testboat.commands.strategy import (
     STRATEGY_FILE,
     Strategy,
     StrategyStatus,
@@ -25,8 +25,8 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 
 
-def _write_strategy(ftest_root: Path, data: dict) -> Path:
-    path = _strategy_path(ftest_root)
+def _write_strategy(testboat_root: Path, data: dict) -> Path:
+    path = _strategy_path(testboat_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.dump(data, allow_unicode=True), encoding="utf-8")
     return path

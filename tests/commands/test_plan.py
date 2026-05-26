@@ -1,4 +1,4 @@
-"""Unit tests for ftest plan command — 100% coverage."""
+"""Unit tests for testboat plan command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.plan import (
+from testboat.cli import app
+from testboat.commands.plan import (
     AutomationTool,
     ExecutionType,
     Plan,
@@ -242,7 +242,7 @@ class TestPlanCli:
     def test_register_exits_zero(self, tmp_path: Path) -> None:
         create_plan(tmp_path, "TC-001")
         result = runner.invoke(app, ["plan", "register", "TC-001",
-                                     ".ftest/draft/automate/pytest/tests/test_TC001.py",
+                                     ".testboat/draft/automate/pytest/tests/test_TC001.py",
                                      "--workspace", str(tmp_path)])
         assert result.exit_code == 0
         assert "pytest" in result.output
@@ -268,9 +268,9 @@ class TestPlanCli:
 class TestRegisterAutomation:
     def test_registers_script_path(self, tmp_path: Path) -> None:
         create_plan(tmp_path, "TC-001")
-        register_automation(tmp_path, "TC-001", ".ftest/draft/automate/pytest/tests/test_TC001.py")
+        register_automation(tmp_path, "TC-001", ".testboat/draft/automate/pytest/tests/test_TC001.py")
         data = yaml.safe_load(_plan_path(tmp_path, "TC-001").read_text())
-        assert data["automation_path"] == ".ftest/draft/automate/pytest/tests/test_TC001.py"
+        assert data["automation_path"] == ".testboat/draft/automate/pytest/tests/test_TC001.py"
 
     def test_infers_pytest_from_py_extension(self, tmp_path: Path) -> None:
         create_plan(tmp_path, "TC-001")
@@ -350,4 +350,4 @@ class TestRegisterAutomation:
 class TestAutomateRoot:
     def test_automate_root_in_executions(self, tmp_path: Path) -> None:
         root = _automate_root(tmp_path)
-        assert ".ftest/draft/executions/automate" in str(root)
+        assert ".testboat/draft/executions/automate" in str(root)

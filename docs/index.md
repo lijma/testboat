@@ -1,15 +1,15 @@
-# ftest
+# testboat
 
 **Manage tests like code — CLI + AI agent skill for the complete testing lifecycle.**
 
-## What is ftest?
+## What is testboat?
 
-ftest treats test artifacts (strategy, test cases, execution results, bugs, reports) as structured files in a versioned directory — just like source code. AI agents and CLI tools operate on the same files, ensuring a single source of truth across the entire testing lifecycle.
+testboat treats test artifacts (strategy, test cases, execution results, bugs, reports) as structured files in a versioned directory — just like source code. AI agents and CLI tools operate on the same files, ensuring a single source of truth across the entire testing lifecycle.
 
 ## Core Idea
 
 ```
-.ftest/
+.testboat/
   draft/              ← always the active working version
     strategy.yaml     ← risk-based test strategy
     cases/            ← TC-001.yaml, TC-002.yaml, ...
@@ -21,7 +21,7 @@ ftest treats test artifacts (strategy, test cases, execution results, bugs, repo
 **CLI** enforces consistency and state machines.  
 **AI agent** generates content, executes automation, and communicates progress.
 
-## Why ftest?
+## Why testboat?
 
 - **Structured**: every artifact is YAML — diffable, reviewable, version-controlled
 - **AI-native**: agent skills guide AI through the full SOP automatically

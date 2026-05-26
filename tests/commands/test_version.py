@@ -1,4 +1,4 @@
-"""Unit tests for ftest version command — 100% coverage."""
+"""Unit tests for testboat version command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,10 +6,10 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.init import init_workspace
-from ftest.commands.active import get_active_version
-from ftest.commands.version import (
+from testboat.cli import app
+from testboat.commands.init import init_workspace
+from testboat.commands.active import get_active_version
+from testboat.commands.version import (
     VERSION_META,
     _draft_path,
     _version_path,
@@ -31,7 +31,7 @@ runner = CliRunner()
 def _make_draft(root: Path) -> Path:
     """Initialize workspace and put a marker file in cases/."""
     init_workspace(root)
-    marker = root / ".ftest" / "draft" / "cases" / "TC-001.yaml"
+    marker = root / ".testboat" / "draft" / "cases" / "TC-001.yaml"
     marker.write_text("id: TC-001\n")
     return root
 
@@ -132,7 +132,7 @@ class TestListVersions:
         _make_draft(tmp_path)
         assert list_versions(tmp_path) == []
 
-    def test_empty_when_no_ftest_dir(self, tmp_path: Path) -> None:
+    def test_empty_when_no_testboat_dir(self, tmp_path: Path) -> None:
         assert list_versions(tmp_path) == []
 
     def test_lists_created_versions(self, tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""Unit tests for ftest tag command — 100% coverage."""
+"""Unit tests for testboat tag command — 100% coverage."""
 
 from pathlib import Path
 
@@ -6,8 +6,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from ftest.cli import app
-from ftest.commands.tag import (
+from testboat.cli import app
+from testboat.commands.tag import (
     DEFAULT_TAGS,
     TAG_KINDS,
     _tags_path,

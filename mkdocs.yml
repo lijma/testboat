@@ -1,9 +1,9 @@
-site_name: ftest
-site_url: https://lijma.github.io/ftest/
+site_name: testboat
+site_url: https://lijma.github.io/testboat/
 site_description: Manage tests like code — CLI + AI agent skill for the complete testing lifecycle.
 site_author: Marvin Li
-repo_url: https://github.com/lijma/ftest
-repo_name: lijma/ftest
+repo_url: https://github.com/lijma/testboat
+repo_name: lijma/testboat
 
 theme:
   name: material
@@ -48,9 +48,9 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/lijma/ftest
+      link: https://github.com/lijma/testboat
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/ftest/
+      link: https://pypi.org/project/testboat/
 
 nav:
   - Home: index.md

@@ -6,7 +6,7 @@ import yaml
 
 from testboat.commands.active import DEFAULT_VERSION, set_active_version
 
-testboat_DIR = ".testboat"
+testboat_DIR = '.testboat'
 DRAFT_DIR = "draft"
 
 DRAFT_SUBDIRS = [
