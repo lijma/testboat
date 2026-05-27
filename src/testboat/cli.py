@@ -879,5 +879,5 @@ def version_show(
     typer.echo(f"Results  : {info['results']}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app()

@@ -115,8 +115,11 @@ tr:hover td { background: #f8f9fa; }
 footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding: 16px; }
 .tc-row { cursor: pointer; user-select: none; }
 .tc-row:hover td { background: #eef4ff !important; }
-.tc-chevron { font-size: 9px; color: #888; margin-right: 6px; display: inline-block;
+.tc-chevron { display: inline-block; width: 0; height: 0; vertical-align: middle;
+              border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+              border-left: 6px solid #999; margin-right: 7px;
               transition: transform .15s; }
+.tc-chevron.open { transform: rotate(90deg); }
 .tc-detail { display: none; }
 .tc-detail td { background: #f8fbff; padding: 16px 20px; }
 .detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -241,7 +244,7 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 <div class="section">
 <div class="section-header">
   <h2>Test Cases</h2>
-  <button class="export-btn" onclick="exportCSV()">↓ export</button>
+  <button class="export-btn" onclick="exportCSV()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>export</button>
 </div>
 
 <div class="filter-bar">
@@ -273,15 +276,15 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 {% set tc_result = matrix[c.id].latest_status if c.id in matrix else 'not-run' %}
 <tr class="tc-row"
     data-tcid="{{ c.id }}"
-    data-sprint="{{ c.tags.sprint or '' }}"
-    data-module="{{ c.tags.module or '' }}"
-    data-type="{{ c.tags.type or '' }}"
+    data-sprint="{{ (c.tags.sprint or '') | e }}"
+    data-module="{{ (c.tags.module or '') | e }}"
+    data-type="{{ (c.tags.type or '') | e }}"
     data-result="{{ tc_result }}"
     onclick="toggleTC('{{ c.id }}')">
-  <td><span class="tc-chevron" id="chev-{{ c.id }}">▶</span>{{ c.id }}</td>
-  <td>{{ c.title }}</td>
-  <td><span class="tag">{{ c.tags.module or '-' }}</span></td>
-  <td><span class="tag">{{ c.tags.type or '-' }}</span></td>
+  <td><span class="tc-chevron" id="chev-{{ c.id }}"></span>{{ c.id }}</td>
+  <td>{{ c.title | e }}</td>
+  <td><span class="tag">{{ (c.tags.module or '-') | e }}</span></td>
+  <td><span class="tag">{{ (c.tags.type or '-') | e }}</span></td>
   <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
   <td>{% if c.id in matrix %}<span class="badge badge-{{ matrix[c.id].latest_status }}">{{ matrix[c.id].latest_status }}</span>{% else %}-{% endif %}</td>
 </tr>
@@ -290,16 +293,16 @@ _SPRINT_TMPL = """<!DOCTYPE html>
     <div class="detail-inner">
       <div class="detail-section">
         <h4>Preconditions</h4>
-        {% if c.preconditions %}<ul>{% for p in c.preconditions %}<li>{{ p }}</li>{% endfor %}</ul>
+        {% if c.preconditions %}<ul>{% for p in c.preconditions %}<li>{{ p | e }}</li>{% endfor %}</ul>
         {% else %}<p>—</p>{% endif %}
       </div>
       <div class="detail-section">
         <h4>Expected Result</h4>
-        <p>{{ c.expected_result or '—' }}</p>
+        <p>{{ (c.expected_result or '—') | e }}</p>
         {% if results_by_tc.get(c.id) %}
         <p class="exec-meta">
           Executed: {{ results_by_tc[c.id].executed_at or '—' }} &nbsp;·&nbsp;
-          By: {{ results_by_tc[c.id].executed_by or '—' }} &nbsp;·&nbsp;
+          By: {{ (results_by_tc[c.id].executed_by or '—') | e }} &nbsp;·&nbsp;
           Type: {{ results_by_tc[c.id].execution_type or '—' }}
         </p>{% endif %}
       </div>
@@ -310,8 +313,8 @@ _SPRINT_TMPL = """<!DOCTYPE html>
       {% for s in c.steps %}
       <tr>
         <td>{{ loop.index }}</td>
-        <td>{{ s.action }}</td>
-        <td>{{ s.expected }}</td>
+        <td>{{ s.action | e }}</td>
+        <td>{{ s.expected | e }}</td>
       </tr>{% endfor %}
     </table>{% endif %}
   </td>
@@ -325,11 +328,11 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 <table><tr><th>ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th><th>Module</th></tr>
 {% for b in bugs %}
 <tr>
-  <td>{{ b.id }}</td><td>{{ b.title }}</td>
+  <td>{{ b.id }}</td><td>{{ b.title | e }}</td>
   <td><span class="badge badge-{{ b.severity }}">{{ b.severity }}</span></td>
   <td><span class="badge badge-{{ b.priority }}">{{ b.priority }}</span></td>
   <td><span class="badge badge-{{ b.status }}">{{ b.status }}</span></td>
-  <td><span class="tag">{{ (b.tags or {}).get('module') or '-' }}</span></td>
+  <td><span class="tag">{{ ((b.tags or {}).get('module') or '-') | e }}</span></td>
 </tr>{% endfor %}
 </table>
 {% else %}<p>No bugs filed.</p>{% endif %}
@@ -371,7 +374,7 @@ function applyFilters() {
       var detail = document.getElementById('detail-' + id);
       if (detail) detail.style.display = 'none';
       var chev = document.getElementById('chev-' + id);
-      if (chev) chev.textContent = '▶';
+      if (chev) chev.classList.remove('open');
     }
   });
   document.getElementById('tc-shown').textContent = shown;
@@ -388,10 +391,10 @@ function toggleTC(id) {
   var chev = document.getElementById('chev-' + id);
   if (detail.style.display === 'table-row') {
     detail.style.display = 'none';
-    chev.textContent = '▶';
+    chev.classList.remove('open');
   } else {
     detail.style.display = 'table-row';
-    chev.textContent = '▼';
+    chev.classList.add('open');
   }
 }
 
@@ -417,7 +420,7 @@ function exportCSV() {
   });
   var filtered = visibleIds.size < totalCases;
   var fname = 'sprint-{{ release }}' + (filtered ? '-filtered' : '') + '-' + new Date().toISOString().slice(0,10) + '.csv';
-  var blob = new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8;'});
+  var blob = new Blob(['\\uFEFF' + lines.join('\\r\\n')], {type: 'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url; a.download = fname; a.click();
