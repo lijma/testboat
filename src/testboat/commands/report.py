@@ -133,6 +133,24 @@ footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; pad
                 vertical-align: top; color: #444; }
 .steps-tbl tr:last-child td { border-bottom: none; }
 .exec-meta { font-size: 11px; color: #888; margin-top: 10px; }
+.filter-bar { background: white; border-radius: 8px; padding: 16px 20px;
+              box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 16px; }
+.filter-group { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.filter-group:last-child { margin-bottom: 0; }
+.filter-label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .8px; color: #888; min-width: 58px; }
+.filter-chip { display: inline-flex; align-items: center; padding: 3px 11px;
+               border-radius: 20px; font-size: 12px; cursor: pointer;
+               border: 1px solid #ddd; background: #f5f5f5; color: #555;
+               transition: background .12s, border-color .12s, color .12s;
+               user-select: none; }
+.filter-chip:hover { border-color: #0066cc; color: #0066cc; background: #eef4ff; }
+.filter-chip.active { background: #0066cc; color: #fff; border-color: #0066cc; }
+.filter-chip.active-pass { background: #28a745; border-color: #28a745; color: #fff; }
+.filter-chip.active-fail { background: #dc3545; border-color: #dc3545; color: #fff; }
+.filter-status { font-size: 12px; color: #888; margin-top: 8px; }
+.filter-status a { color: #0066cc; cursor: pointer; background: none; border: none;
+                   font-size: 12px; padding: 0; text-decoration: underline; }
 """
 
 _TIMESTAMP = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -213,9 +231,41 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 
 <div class="section">
 <h2>Test Cases</h2>
-<table><tr><th>ID</th><th>Title</th><th>Module</th><th>Type</th><th>Status</th><th>Latest Result</th></tr>
+
+<div class="filter-bar">
+  {% if tag_sprints|length > 1 %}
+  <div class="filter-group">
+    <span class="filter-label">Sprint</span>
+    {% for s in tag_sprints %}<span class="filter-chip" data-dim="sprint" data-val="{{ s }}" onclick="toggleFilter(this)">{{ s }}</span>{% endfor %}
+  </div>{% endif %}
+  {% if tag_modules %}
+  <div class="filter-group">
+    <span class="filter-label">Module</span>
+    {% for m in tag_modules %}<span class="filter-chip" data-dim="module" data-val="{{ m }}" onclick="toggleFilter(this)">{{ m }}</span>{% endfor %}
+  </div>{% endif %}
+  {% if tag_types|length > 1 %}
+  <div class="filter-group">
+    <span class="filter-label">Type</span>
+    {% for t in tag_types %}<span class="filter-chip" data-dim="type" data-val="{{ t }}" onclick="toggleFilter(this)">{{ t }}</span>{% endfor %}
+  </div>{% endif %}
+  {% if tag_results %}
+  <div class="filter-group">
+    <span class="filter-label">Result</span>
+    {% for r in tag_results %}<span class="filter-chip" data-dim="result" data-val="{{ r }}" onclick="toggleFilter(this)">{{ r }}</span>{% endfor %}
+  </div>{% endif %}
+  <div class="filter-status">Showing <strong id="tc-shown">{{ cases|length }}</strong> / {{ cases|length }} test cases &nbsp;·&nbsp; <a onclick="clearFilters()">Clear all</a></div>
+</div>
+
+<table id="tc-table"><tr><th>ID</th><th>Title</th><th>Module</th><th>Type</th><th>Status</th><th>Latest Result</th></tr>
 {% for c in cases %}
-<tr class="tc-row" onclick="toggleTC('{{ c.id }}')">
+{% set tc_result = matrix[c.id].latest_status if c.id in matrix else 'not-run' %}
+<tr class="tc-row"
+    data-tcid="{{ c.id }}"
+    data-sprint="{{ c.tags.sprint or '' }}"
+    data-module="{{ c.tags.module or '' }}"
+    data-type="{{ c.tags.type or '' }}"
+    data-result="{{ tc_result }}"
+    onclick="toggleTC('{{ c.id }}')">
   <td><span class="tc-chevron" id="chev-{{ c.id }}">▶</span>{{ c.id }}</td>
   <td>{{ c.title }}</td>
   <td><span class="tag">{{ c.tags.module or '-' }}</span></td>
@@ -257,14 +307,57 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 {% endfor %}
 </table></div>
 <script>
+var filters = { sprint: new Set(), module: new Set(), type: new Set(), result: new Set() };
+var totalCases = {{ cases|length }};
+
+function toggleFilter(chip) {
+  var dim = chip.dataset.dim, val = chip.dataset.val;
+  if (filters[dim].has(val)) {
+    filters[dim].delete(val);
+    chip.classList.remove('active');
+  } else {
+    filters[dim].add(val);
+    chip.classList.add('active');
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  var rows = document.querySelectorAll('.tc-row');
+  var shown = 0;
+  rows.forEach(function(row) {
+    var visible = ['sprint','module','type','result'].every(function(dim) {
+      return filters[dim].size === 0 || filters[dim].has(row.dataset[dim]);
+    });
+    var id = row.dataset.tcid;
+    if (visible) {
+      row.style.display = '';
+      shown++;
+    } else {
+      row.style.display = 'none';
+      var detail = document.getElementById('detail-' + id);
+      if (detail) detail.style.display = 'none';
+      var chev = document.getElementById('chev-' + id);
+      if (chev) chev.textContent = '▶';
+    }
+  });
+  document.getElementById('tc-shown').textContent = shown;
+}
+
+function clearFilters() {
+  Object.keys(filters).forEach(function(k) { filters[k].clear(); });
+  document.querySelectorAll('.filter-chip.active').forEach(function(c) { c.classList.remove('active'); });
+  applyFilters();
+}
+
 function toggleTC(id) {
-  var row = document.getElementById('detail-' + id);
+  var detail = document.getElementById('detail-' + id);
   var chev = document.getElementById('chev-' + id);
-  if (row.style.display === 'table-row') {
-    row.style.display = 'none';
+  if (detail.style.display === 'table-row') {
+    detail.style.display = 'none';
     chev.textContent = '▶';
   } else {
-    row.style.display = 'table-row';
+    detail.style.display = 'table-row';
     chev.textContent = '▼';
   }
 }
@@ -420,6 +513,18 @@ def _compute_sprint_data(
             if latest:
                 results_by_tc[tc_id] = latest
 
+    def _tag(c: dict, key: str) -> str:
+        return (c.get("tags") or {}).get(key) or ""
+
+    tag_sprints = sorted({_tag(c, "sprint") for c in cases} - {""})
+    tag_modules = sorted({_tag(c, "module") for c in cases} - {""})
+    tag_types   = sorted({_tag(c, "type")   for c in cases} - {""})
+    tag_results = sorted(
+        {matrix[c.get("id", "")].get("latest_status", "")
+         if c.get("id", "") in matrix else "not-run"
+         for c in cases} - {""}
+    )
+
     return dict(
         strategy=strategy,
         release=strategy.get("release", "draft"),
@@ -427,6 +532,10 @@ def _compute_sprint_data(
         matrix=matrix,
         bugs=bugs,
         results_by_tc=results_by_tc,
+        tag_sprints=tag_sprints,
+        tag_modules=tag_modules,
+        tag_types=tag_types,
+        tag_results=tag_results,
         total_cases=total,
         pass_count=pass_count,
         fail_count=fail_count,
