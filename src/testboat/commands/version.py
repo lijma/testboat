@@ -14,6 +14,9 @@ from testboat.commands.active import DEFAULT_VERSION, get_active_version, set_ac
 DRAFT_DIR = "draft"
 VERSION_META = ".version.yaml"
 
+# Subdirectories created for a fresh (blank) version
+_FRESH_SUBDIRS = ["cases", "executions", "bugs", "reports"]
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -65,16 +68,17 @@ def _read_meta(version_dir: Path) -> dict[str, Any]:
 # Operations
 # ---------------------------------------------------------------------------
 
-def create_version(testboat_root: Path, version: str, base: str | None = None) -> Path:
-    """Create a new named version.
+def create_version(testboat_root: Path, version: str, source: str | None = None) -> Path:
+    """Create a new named version and switch active to it.
 
-    If *base* is None: copy draft → .testboat/<version>/
-    If *base* is set:  copy .testboat/<base>/ → .testboat/<version>/
+    source=None      → fresh blank version (empty dirs + testboat.yaml)
+    source='draft'   → copy from .testboat/draft/
+    source=<name>    → copy from .testboat/<name>/
 
     Returns the created version directory.
-    Raises FileExistsError if version already exists.
-    Raises FileNotFoundError if base version or draft does not exist.
-    Raises ValueError if version name is 'draft' or starts with '.'.
+    Raises FileExistsError  if version already exists.
+    Raises FileNotFoundError if the source version/draft does not exist.
+    Raises ValueError if the version name is 'draft' or starts with '.'.
     """
     if version == DRAFT_DIR or version.startswith("."):
         raise ValueError(f"Invalid version name '{version}'.")
@@ -83,17 +87,33 @@ def create_version(testboat_root: Path, version: str, base: str | None = None) -
     if dest.exists():
         raise FileExistsError(f"Version '{version}' already exists.")
 
-    if base is None:
-        src = _draft_path(testboat_root)
-        if not src.exists():
-            raise FileNotFoundError("No draft found. Run `testboat init` first.")
+    if source is None:
+        # Fresh blank version — just scaffold the directory structure
+        dest.mkdir(parents=True)
+        for subdir in _FRESH_SUBDIRS:
+            (dest / subdir).mkdir()
+        config = {
+            "version": version,
+            "workspace": str(testboat_root),
+            "created_by": "testboat version",
+        }
+        (dest / "testboat.yaml").write_text(
+            yaml.dump(config, default_flow_style=False, allow_unicode=True),
+            encoding="utf-8",
+        )
     else:
-        src = _version_path(testboat_root, base)
+        src = (
+            _draft_path(testboat_root)
+            if source == DRAFT_DIR
+            else _version_path(testboat_root, source)
+        )
         if not src.exists():
-            raise FileNotFoundError(f"Base version '{base}' not found.")
+            label = "draft" if source == DRAFT_DIR else f"version '{source}'"
+            raise FileNotFoundError(f"Source {label} not found.")
+        shutil.copytree(src, dest)
 
-    shutil.copytree(src, dest)
-    _write_meta(dest, version, base)
+    _write_meta(dest, version, source)
+    set_active_version(testboat_root, version)
     return dest
 
 

@@ -4,8 +4,10 @@ import threading
 from pathlib import Path
 from typing import Annotated, Optional
 
+import click
 import yaml
 import typer
+from typer.core import TyperGroup
 
 from testboat.commands.case import (
     CaseStatus,
@@ -66,7 +68,23 @@ matrix_app = typer.Typer(help="Global execution tracking matrix.")
 bug_app = typer.Typer(help="Bug / defect lifecycle management.")
 
 report_app = typer.Typer(help="Generate HTML test reports.")
-version_app = typer.Typer(help="Manage named test artifact versions.")
+class _VersionGroup(TyperGroup):
+    """Custom Click Group that routes unknown subcommand names to version creation."""
+    _HIDDEN = "_create"
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        cmd = super().get_command(ctx, cmd_name)
+        if cmd is not None:
+            return cmd
+        if cmd_name.startswith("-"):
+            return None  # pragma: no cover
+        # Unknown name → treat as new version name; delegate to hidden _create
+        ctx.ensure_object(dict)
+        ctx.obj["_new_version"] = cmd_name
+        return super().get_command(ctx, self._HIDDEN)
+
+
+version_app = typer.Typer(cls=_VersionGroup, help="Manage named test artifact versions.")
 
 app.add_typer(strategy_app, name="strategy")
 app.add_typer(tag_app, name="tag")
@@ -788,27 +806,39 @@ def validate_cmd(
 
 @version_app.callback()
 def _version_main() -> None:
-    """Manage named test artifact versions."""
+    """Manage named test artifact versions.
+
+    \b
+    testboat version v2.0          # fresh blank version → active
+    testboat version v2.0 draft    # copy from draft → active
+    testboat version v2.0 v1.0     # copy from v1.0 → active
+    """
 
 
-@version_app.command("create")
-def version_create(
-    version: Annotated[str, typer.Argument(help="New version name, e.g. v1.0.")],
-    base: Annotated[Optional[str], typer.Argument(help="Base version to copy from (omit to use draft).")] = None,
+@version_app.command("_create", hidden=True)
+def _version_create(
+    ctx: typer.Context,
+    source: Annotated[Optional[str], typer.Argument(
+        help="Source: omit=fresh, 'draft', or existing version name."
+    )] = None,
     workspace: Annotated[Optional[Path], typer.Option("--workspace", "-w")] = None,
 ) -> None:
-    """Create a named version from draft or from an existing version."""
+    """(Internal) Create a version from an unknown subcommand name."""
+    version: str = (ctx.obj or {}).get("_new_version", "")
+    if not version:
+        typer.echo("Error: no version name provided.", err=True)
+        raise typer.Exit(code=1)
     target = _workspace(workspace)
     try:
-        vdir = create_version(target, version, base=base)
+        vdir = create_version(target, version, source=source)
     except (FileExistsError, FileNotFoundError, ValueError) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1)
-
-    if base:
-        typer.echo(f"Created version '{version}' based on '{base}' → {vdir.relative_to(target)}")
+    if source is None:
+        typer.echo(f"Created version '{version}' (fresh) → {vdir.relative_to(target)}")
     else:
-        typer.echo(f"Created version '{version}' from draft → {vdir.relative_to(target)}")
+        typer.echo(f"Created version '{version}' from '{source}' → {vdir.relative_to(target)}")
+    typer.echo(f"Active version → {version}")
 
 
 @version_app.command("list")
@@ -821,14 +851,14 @@ def version_list(
     versions = list_versions(target)
     typer.echo(f"Active: {active}\n")
     if not versions:
-        typer.echo("No named versions yet. Run `testboat version create <name>` to create one.")
+        typer.echo("No named versions yet. Run `testboat version <name>` to create one.")
         return
     typer.echo(f"{'VERSION':<12} {'BASE':<12} {'CASES':<7} {'BUGS':<6} {'CREATED AT'}")
     typer.echo("─" * 60)
     for v in versions:
         marker = " ◀ active" if v["version"] == active else ""
         typer.echo(
-            f"{v['version']:<12} {(v['base'] or 'draft'):<12} "
+            f"{v['version']:<12} {(v['base'] or '(fresh)'):<12} "
             f"{v['cases']:<7} {v['bugs']:<6} {v['created_at']}{marker}"
         )
 
