@@ -3,6 +3,7 @@
 from __future__ import annotations
 from testboat.commands.active import active_dir
 
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -151,6 +152,14 @@ footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; pad
 .filter-status { font-size: 12px; color: #888; margin-top: 8px; }
 .filter-status a { color: #0066cc; cursor: pointer; background: none; border: none;
                    font-size: 12px; padding: 0; text-decoration: underline; }
+.section-header { display: flex; align-items: center; justify-content: space-between;
+                  margin-bottom: 12px; }
+.section-header h2 { margin: 0; }
+.export-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 18px;
+              border: 1.5px solid #dc3545; border-radius: 6px; color: #dc3545;
+              background: white; font-size: 13px; font-weight: 500; cursor: pointer;
+              transition: background .15s, color .15s; }
+.export-btn:hover { background: #dc3545; color: white; }
 """
 
 _TIMESTAMP = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -230,7 +239,10 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 </div>
 
 <div class="section">
-<h2>Test Cases</h2>
+<div class="section-header">
+  <h2>Test Cases</h2>
+  <button class="export-btn" onclick="exportCSV()">↓ export</button>
+</div>
 
 <div class="filter-bar">
   {% if tag_sprints|length > 1 %}
@@ -307,6 +319,7 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 {% endfor %}
 </table></div>
 <script>
+var TC_DATA = {{ tc_json }};
 var filters = { sprint: new Set(), module: new Set(), type: new Set(), result: new Set() };
 var totalCases = {{ cases|length }};
 
@@ -360,6 +373,35 @@ function toggleTC(id) {
     detail.style.display = 'table-row';
     chev.textContent = '▼';
   }
+}
+
+function exportCSV() {
+  var headers = ['ID','Title','Sprint','Module','Type','Priority','Req ID','TC Status',
+                 'Latest Result','Executed At','Executed By','Execution Type',
+                 'Preconditions','Expected Result','Steps','Notes'];
+  var visibleIds = new Set();
+  document.querySelectorAll('.tc-row').forEach(function(row) {
+    if (row.style.display !== 'none') visibleIds.add(row.dataset.tcid);
+  });
+  var rows = TC_DATA.filter(function(tc) { return visibleIds.has(tc.id); });
+  function esc(v) {
+    var s = (v == null ? '' : String(v)).replace(/"/g, '""');
+    return '"' + s + '"';
+  }
+  var lines = [headers.map(esc).join(',')];
+  rows.forEach(function(tc) {
+    lines.push([tc.id, tc.title, tc.sprint, tc.module, tc.type, tc.priority,
+                tc.req_id, tc.tc_status, tc.latest_result, tc.executed_at,
+                tc.executed_by, tc.execution_type, tc.preconditions,
+                tc.expected_result, tc.steps, tc.notes].map(esc).join(','));
+  });
+  var filtered = visibleIds.size < totalCases;
+  var fname = 'sprint-{{ release }}' + (filtered ? '-filtered' : '') + '-' + new Date().toISOString().slice(0,10) + '.csv';
+  var blob = new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = fname; a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 
@@ -545,10 +587,47 @@ def _compute_sprint_data(
     )
 
 
+def _build_tc_json(data: dict) -> str:
+    """Serialize TC data to a JSON string for client-side CSV export."""
+    cases = data["cases"]
+    matrix = data["matrix"]
+    results_by_tc = data["results_by_tc"]
+    rows = []
+    for c in cases:
+        tc_id = c.get("id", "")
+        tags = c.get("tags") or {}
+        res = results_by_tc.get(tc_id, {})
+        steps = c.get("steps") or []
+        steps_str = " | ".join(
+            f"{i+1}. {s.get('action', '')} → {s.get('expected', '')}"
+            for i, s in enumerate(steps)
+        )
+        preconditions_str = " | ".join(c.get("preconditions") or [])
+        rows.append({
+            "id": tc_id,
+            "title": c.get("title", ""),
+            "sprint": tags.get("sprint", ""),
+            "module": tags.get("module", ""),
+            "type": tags.get("type", ""),
+            "priority": c.get("priority", ""),
+            "req_id": c.get("req_id", ""),
+            "tc_status": c.get("status", ""),
+            "latest_result": matrix.get(tc_id, {}).get("latest_status", "not-run"),
+            "executed_at": res.get("executed_at", ""),
+            "executed_by": res.get("executed_by", ""),
+            "execution_type": res.get("execution_type", ""),
+            "preconditions": preconditions_str,
+            "expected_result": c.get("expected_result", ""),
+            "steps": steps_str,
+            "notes": c.get("notes", ""),
+        })
+    return json.dumps(rows, ensure_ascii=False)
+
+
 def generate_sprint(testboat_root: Path) -> Path:
     """Render sprint test report. Returns output path."""
     data = _compute_sprint_data(testboat_root)
-    html = _render(_SPRINT_TMPL, **data)
+    html = _render(_SPRINT_TMPL, tc_json=_build_tc_json(data), **data)
     return _write_report(testboat_root, f"sprint-{data['release']}.html", html)
 
 
