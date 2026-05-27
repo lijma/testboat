@@ -22,6 +22,7 @@ from testboat.commands.preview import (
     serve_reports,
 )
 from testboat.commands.report import (
+    _build_tc_json,
     _load_bugs,
     _load_cases,
     _load_matrix,
@@ -233,6 +234,143 @@ class TestGenerateSprint:
     def test_empty_workspace(self, tmp_path: Path) -> None:
         path = generate_sprint(tmp_path)
         assert path.exists()
+
+    def test_filter_chips_present(self, tmp_path: Path) -> None:
+        _setup(tmp_path)
+        html = generate_sprint(tmp_path).read_text(encoding="utf-8")
+        assert "filter-chip" in html
+        assert "toggleFilter" in html
+
+    def test_export_button_present(self, tmp_path: Path) -> None:
+        _setup(tmp_path)
+        html = generate_sprint(tmp_path).read_text(encoding="utf-8")
+        assert "export-btn" in html
+        assert "exportCSV" in html
+
+    def test_tc_json_data_element_present(self, tmp_path: Path) -> None:
+        _setup(tmp_path)
+        html = generate_sprint(tmp_path).read_text(encoding="utf-8")
+        assert 'id="tc-json"' in html
+        assert "JSON.parse" in html
+
+    def test_script_not_closed_by_slash_script_in_tc_content(self, tmp_path: Path) -> None:
+        add_tag(tmp_path, "sprint", "v1.0.0")
+        add_tag(tmp_path, "type", "functional")
+        add_tag(tmp_path, "module", "xss")
+        create_strategy(tmp_path)
+        add_case(tmp_path, "XSS title </script><script>window.HACKED=true</script>",
+                 sprint="v1.0.0", type_="functional", module="xss", req_id="STORY-001")
+        set_status(tmp_path, "TC-001", "ready")
+        record_result(tmp_path, "TC-001", "pass", execution_type="automated")
+        set_status(tmp_path, "TC-001", "pass")
+        html = generate_sprint(tmp_path).read_text(encoding="utf-8")
+        # </script> must not appear raw inside any <script> element
+        import re
+        script_blocks = re.findall(r"<script(?:\s[^>]*)?>.*?</script>", html, re.DOTALL | re.IGNORECASE)
+        for block in script_blocks:
+            inner = re.sub(r"<script[^>]*>", "", block, count=1)
+            inner = inner[: inner.rfind("</script>")]
+            assert "</script>" not in inner.lower(), \
+                f"Raw </script> found inside a script block: {inner[:100]}"
+        assert "toggleFilter" in html
+        assert "exportCSV" in html
+
+    def test_u2028_u2029_do_not_break_script(self, tmp_path: Path) -> None:
+        add_tag(tmp_path, "sprint", "v1.0.0")
+        add_tag(tmp_path, "type", "functional")
+        add_tag(tmp_path, "module", "unicode")
+        create_strategy(tmp_path)
+        dangerous = f"title with line-sep   and para-sep   inside"
+        add_case(tmp_path, dangerous, sprint="v1.0.0", type_="functional",
+                 module="unicode", req_id="STORY-001")
+        set_status(tmp_path, "TC-001", "ready")
+        record_result(tmp_path, "TC-001", "pass", execution_type="automated")
+        set_status(tmp_path, "TC-001", "pass")
+        html = generate_sprint(tmp_path).read_text(encoding="utf-8")
+        # Raw U+2028 / U+2029 must not appear inside any <script> element
+        import re
+        script_blocks = re.findall(r"<script(?:\s[^>]*)?>.*?</script>", html, re.DOTALL | re.IGNORECASE)
+        for block in script_blocks:
+            assert " " not in block, "U+2028 found raw inside a script block"
+            assert " " not in block, "U+2029 found raw inside a script block"
+        assert "toggleFilter" in html
+
+
+class TestBuildTcJson:
+    def _make_data(self, cases: list, matrix: dict | None = None,
+                   results_by_tc: dict | None = None) -> dict:
+        return {"cases": cases, "matrix": matrix or {}, "results_by_tc": results_by_tc or {}}
+
+    def test_returns_valid_json(self, tmp_path: Path) -> None:
+        import json
+        data = self._make_data([{"id": "TC-1", "title": "t", "tags": {"sprint": "s",
+                                  "module": "m", "type": "f"}, "status": "pass",
+                                  "priority": "P1", "req_id": "R1",
+                                  "preconditions": ["p"], "steps": [{"action": "a",
+                                  "expected": "e"}], "expected_result": "er", "notes": ""}])
+        result = json.loads(_build_tc_json(data))
+        assert result[0]["id"] == "TC-1"
+        assert result[0]["steps"] == "1. a → e"
+
+    def test_script_tag_in_title_escaped(self) -> None:
+        data = self._make_data([{"id": "TC-1", "title": "</script><script>bad()</script>",
+                                  "tags": {}, "status": "pass", "priority": "P1",
+                                  "req_id": "", "preconditions": [], "steps": [],
+                                  "expected_result": "", "notes": ""}])
+        result = _build_tc_json(data)
+        assert "</script>" not in result
+        assert "<\\/script>" in result
+
+    def test_u2028_u2029_escaped(self) -> None:
+        data = self._make_data([{"id": "TC-1", "title": f"a b c",
+                                  "tags": {}, "status": "pass", "priority": "P1",
+                                  "req_id": "", "preconditions": [], "steps": [],
+                                  "expected_result": "", "notes": ""}])
+        result = _build_tc_json(data)
+        assert " " not in result
+        assert " " not in result
+
+    def test_none_tags_handled(self) -> None:
+        data = self._make_data([{"id": "TC-1", "title": "t", "tags": None,
+                                  "status": "pass", "priority": "P1", "req_id": "",
+                                  "preconditions": None, "steps": None,
+                                  "expected_result": None, "notes": None}])
+        import json
+        result = json.loads(_build_tc_json(data))
+        assert result[0]["module"] == ""
+        assert result[0]["steps"] == ""
+        assert result[0]["preconditions"] == ""
+
+    def test_result_metadata_included(self) -> None:
+        import json
+        cases = [{"id": "TC-1", "title": "t", "tags": {}, "status": "pass",
+                  "priority": "P1", "req_id": "", "preconditions": [],
+                  "steps": [], "expected_result": "", "notes": ""}]
+        results_by_tc = {"TC-1": {"executed_at": "2026-01-01T00:00:00",
+                                   "executed_by": "AI", "execution_type": "automated"}}
+        data = self._make_data(cases, results_by_tc=results_by_tc)
+        result = json.loads(_build_tc_json(data))
+        assert result[0]["executed_at"] == "2026-01-01T00:00:00"
+        assert result[0]["executed_by"] == "AI"
+
+    def test_latest_result_from_matrix(self) -> None:
+        import json
+        cases = [{"id": "TC-1", "title": "t", "tags": {}, "status": "pass",
+                  "priority": "P1", "req_id": "", "preconditions": [],
+                  "steps": [], "expected_result": "", "notes": ""}]
+        matrix = {"TC-1": {"latest_status": "fail"}}
+        data = self._make_data(cases, matrix=matrix)
+        result = json.loads(_build_tc_json(data))
+        assert result[0]["latest_result"] == "fail"
+
+    def test_missing_tc_defaults_to_not_run(self) -> None:
+        import json
+        cases = [{"id": "TC-99", "title": "t", "tags": {}, "status": "ready",
+                  "priority": "P2", "req_id": "", "preconditions": [],
+                  "steps": [], "expected_result": "", "notes": ""}]
+        data = self._make_data(cases)
+        result = json.loads(_build_tc_json(data))
+        assert result[0]["latest_result"] == "not-run"
 
 
 # ---------------------------------------------------------------------------
