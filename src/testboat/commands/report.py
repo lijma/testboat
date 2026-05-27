@@ -1051,13 +1051,18 @@ def _per_version_report_index(testboat_root: Path, version_name: str,
                         chips=["Metrics", "Sign-off", "Summary"]),
     }
     available_reports = []
+    seen_types: set[str] = set()
     if reports_dir.exists():
-        for html_file in sorted(reports_dir.glob("*.html")):
-            if html_file.name == "index.html":
-                continue
+        # newest first so we always show the most recently generated report per type
+        html_files = sorted(
+            (f for f in reports_dir.glob("*.html") if f.name != "index.html"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        )
+        for html_file in html_files:
             for key, meta in report_meta.items():
-                if html_file.name.startswith(key):
+                if html_file.name.startswith(key) and key not in seen_types:
                     available_reports.append(dict(**meta, filename=html_file.name))
+                    seen_types.add(key)
                     break
 
     env = Environment(loader=BaseLoader())
