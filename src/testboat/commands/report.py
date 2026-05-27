@@ -112,6 +112,27 @@ tr:hover td { background: #f8f9fa; }
 .tag { display: inline-block; background: #e8f0fe; color: #1a73e8;
        border-radius: 4px; padding: 1px 6px; font-size: 11px; margin: 1px; }
 footer { text-align: center; color: #999; font-size: 12px; margin-top: 40px; padding: 16px; }
+.tc-row { cursor: pointer; user-select: none; }
+.tc-row:hover td { background: #eef4ff !important; }
+.tc-chevron { font-size: 9px; color: #888; margin-right: 6px; display: inline-block;
+              transition: transform .15s; }
+.tc-detail { display: none; }
+.tc-detail td { background: #f8fbff; padding: 16px 20px; }
+.detail-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.detail-section h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+                     color: #666; margin-bottom: 8px; border-bottom: 1px solid #dce6f8;
+                     padding-bottom: 4px; }
+.detail-section ul { padding-left: 16px; font-size: 12px; color: #555; margin: 0; }
+.detail-section ul li { margin-bottom: 4px; }
+.detail-section p { font-size: 12px; color: #555; margin: 0; line-height: 1.5; }
+.steps-tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px;
+             box-shadow: none; border-radius: 6px; overflow: hidden; background: white; }
+.steps-tbl th { background: #e8f0fe; color: #1a73e8; padding: 6px 10px;
+                text-align: left; font-size: 11px; }
+.steps-tbl td { padding: 6px 10px; border-bottom: 1px solid #e8f0fe;
+                vertical-align: top; color: #444; }
+.steps-tbl tr:last-child td { border-bottom: none; }
+.exec-meta { font-size: 11px; color: #888; margin-top: 10px; }
 """
 
 _TIMESTAMP = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -194,15 +215,60 @@ _SPRINT_TMPL = """<!DOCTYPE html>
 <h2>Test Cases</h2>
 <table><tr><th>ID</th><th>Title</th><th>Module</th><th>Type</th><th>Status</th><th>Latest Result</th></tr>
 {% for c in cases %}
-<tr>
-  <td>{{ c.id }}</td>
+<tr class="tc-row" onclick="toggleTC('{{ c.id }}')">
+  <td><span class="tc-chevron" id="chev-{{ c.id }}">▶</span>{{ c.id }}</td>
   <td>{{ c.title }}</td>
   <td><span class="tag">{{ c.tags.module or '-' }}</span></td>
   <td><span class="tag">{{ c.tags.type or '-' }}</span></td>
   <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
   <td>{% if c.id in matrix %}<span class="badge badge-{{ matrix[c.id].latest_status }}">{{ matrix[c.id].latest_status }}</span>{% else %}-{% endif %}</td>
-</tr>{% endfor %}
+</tr>
+<tr class="tc-detail" id="detail-{{ c.id }}">
+  <td colspan="6">
+    <div class="detail-inner">
+      <div class="detail-section">
+        <h4>Preconditions</h4>
+        {% if c.preconditions %}<ul>{% for p in c.preconditions %}<li>{{ p }}</li>{% endfor %}</ul>
+        {% else %}<p>—</p>{% endif %}
+      </div>
+      <div class="detail-section">
+        <h4>Expected Result</h4>
+        <p>{{ c.expected_result or '—' }}</p>
+        {% if results_by_tc.get(c.id) %}
+        <p class="exec-meta">
+          Executed: {{ results_by_tc[c.id].executed_at or '—' }} &nbsp;·&nbsp;
+          By: {{ results_by_tc[c.id].executed_by or '—' }} &nbsp;·&nbsp;
+          Type: {{ results_by_tc[c.id].execution_type or '—' }}
+        </p>{% endif %}
+      </div>
+    </div>
+    {% if c.steps %}
+    <table class="steps-tbl">
+      <tr><th style="width:30px">#</th><th style="width:50%">Action</th><th>Expected</th></tr>
+      {% for s in c.steps %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ s.action }}</td>
+        <td>{{ s.expected }}</td>
+      </tr>{% endfor %}
+    </table>{% endif %}
+  </td>
+</tr>
+{% endfor %}
 </table></div>
+<script>
+function toggleTC(id) {
+  var row = document.getElementById('detail-' + id);
+  var chev = document.getElementById('chev-' + id);
+  if (row.style.display === 'table-row') {
+    row.style.display = 'none';
+    chev.textContent = '▶';
+  } else {
+    row.style.display = 'table-row';
+    chev.textContent = '▼';
+  }
+}
+</script>
 
 <div class="section">
 <h2>Bugs ({{ bugs|length }} total)</h2>
@@ -333,14 +399,26 @@ def _compute_sprint_data(
     cases = _load_cases(testboat_root)
     matrix = _load_matrix(testboat_root)
     bugs = _load_bugs(testboat_root)
+    results = _load_results(testboat_root)
 
     total = len(cases)
-    pass_count = sum(1 for c in cases if c.get("status") == "pass")
-    fail_count = sum(1 for c in cases if c.get("status") == "fail")
+    pass_count = sum(1 for c in cases
+                     if matrix.get(c.get("id"), {}).get("latest_status") == "pass")
+    fail_count = sum(1 for c in cases
+                     if matrix.get(c.get("id"), {}).get("latest_status") == "fail")
     not_run = total - sum(1 for tc_id in matrix)
     open_bugs = sum(1 for b in bugs
                     if b.get("status") not in ("closed", "wont-fix", "deferred"))
     pass_rate = round(pass_count / total * 100) if total else 0
+
+    results_by_id = {r.get("id"): r for r in results}
+    results_by_tc: dict[str, Any] = {}
+    for tc_id, m_data in matrix.items():
+        result_ids = m_data.get("result_ids", [])
+        if result_ids:
+            latest = results_by_id.get(result_ids[-1])
+            if latest:
+                results_by_tc[tc_id] = latest
 
     return dict(
         strategy=strategy,
@@ -348,6 +426,7 @@ def _compute_sprint_data(
         cases=cases,
         matrix=matrix,
         bugs=bugs,
+        results_by_tc=results_by_tc,
         total_cases=total,
         pass_count=pass_count,
         fail_count=fail_count,
@@ -717,11 +796,17 @@ def _version_stats(version_dir: Path) -> dict:
     bugs_raw = [yaml.safe_load(p.read_text(encoding="utf-8"))
                 for p in sorted(bugs_dir.glob("BUG-*.yaml"))] if bugs_dir.exists() else []
 
+    # Load execution matrix to get actual pass/fail results
+    matrix_path = version_dir / "executions" / "execution-matrix.yaml"
+    matrix: dict = yaml.safe_load(matrix_path.read_text(encoding="utf-8")) \
+        if matrix_path.exists() else {}
+
     total = len(cases)
     pass_count = 0
     for p in cases:
         d = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        if d.get("status") == "pass":
+        tc_id = d.get("id", "")
+        if matrix.get(tc_id, {}).get("latest_status") == "pass":
             pass_count += 1
 
     open_bugs = sum(1 for b in bugs_raw
@@ -734,6 +819,10 @@ def _per_version_report_index(testboat_root: Path, version_name: str,
                                version_dir: Path, reports_dir: Path) -> Path:
     """Generate reports/index.html for one version. Returns path."""
     stats = _version_stats(version_dir)
+    # Load execution matrix for accurate pass/fail counts
+    matrix_path = version_dir / "executions" / "execution-matrix.yaml"
+    matrix_data: dict = yaml.safe_load(matrix_path.read_text(encoding="utf-8")) \
+        if matrix_path.exists() else {}
     bugs_raw = [yaml.safe_load(p.read_text(encoding="utf-8"))
                 for p in sorted((version_dir / "bugs").glob("BUG-*.yaml"))]  \
         if (version_dir / "bugs").exists() else []
@@ -781,10 +870,14 @@ def _per_version_report_index(testboat_root: Path, version_name: str,
         release=version_name,
         total_cases=stats["cases"],
         pass_count=sum(1 for p in (version_dir / "cases").glob("TC-*.yaml")
-                       if yaml.safe_load(p.read_text(encoding="utf-8")).get("status") == "pass")
+                       if matrix_data.get(
+                           yaml.safe_load(p.read_text(encoding="utf-8")).get("id"), {}
+                       ).get("latest_status") == "pass")
                    if (version_dir / "cases").exists() else 0,
         fail_count=sum(1 for p in (version_dir / "cases").glob("TC-*.yaml")
-                       if yaml.safe_load(p.read_text(encoding="utf-8")).get("status") == "fail")
+                       if matrix_data.get(
+                           yaml.safe_load(p.read_text(encoding="utf-8")).get("id"), {}
+                       ).get("latest_status") == "fail")
                    if (version_dir / "cases").exists() else 0,
         pass_rate=stats["pass_rate"],
         open_bugs=len(open_bugs_list),
