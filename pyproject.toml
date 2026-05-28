@@ -58,6 +58,7 @@ addopts = "--cov=testboat --cov-report=term-missing --cov-fail-under=100"
 source = ["src/testboat"]
 
 [tool.coverage.report]
+omit = ["src/testboat/_version.py"]
 exclude_lines = [
     "if __name__ == .__main__.:",
 ]
