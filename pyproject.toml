@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "testboat"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Manage tests like code — CLI + AI agent skill for the complete testing lifecycle"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -44,8 +44,11 @@ dev = [
     "pytest-cov>=5.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/testboat"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+write_to = "src/testboat/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
